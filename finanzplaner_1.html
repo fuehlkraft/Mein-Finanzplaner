@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mein Finanzplaner · Fühlkraft</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --pink: #C2185B; --bordeaux: #7B1034; --accent: #D4537E;
+  --light-pink: #FBEAF0; --light-bord: #f3e0e6;
+  --success: #3B6D11; --warn: #BA7517; --danger: #A32D2D;
+  --bg: #f7f3ee; --bg2: #eae1d8; --card: #ffffff;
+  --border: rgba(123,16,52,0.13);
+  --text: #2a1a1f; --muted: #7a5a63;
+  --font-head: 'Cormorant Garamond', serif;
+  --font-body: 'Lato', sans-serif;
+}
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; }
+header {
+  background: var(--bordeaux); color: #fff; padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 12px rgba(123,16,52,0.18);
+}
+header h1 { font-family: var(--font-head); font-size: 22px; font-weight: 600; }
+.subtitle { font-size: 11px; opacity: 0.7; font-weight: 300; letter-spacing: 0.05em; text-transform: uppercase; }
+.save-status { font-size: 11px; opacity: 0.8; display: flex; align-items: center; gap: 4px; }
+.save-status.saved { color: #a8e6b8; }
+.save-status.saving { color: #fde68a; }
+.save-status.error { color: #fca5a5; }
+.countdown-banner {
+  background: var(--bordeaux); color: #fff;
+  text-align: center; padding: 14px; display: flex;
+  align-items: center; justify-content: center; gap: 20px;
+}
+.cd-block { text-align: center; }
+.cd-num { font-family: var(--font-head); font-size: 32px; font-weight: 600; line-height: 1; }
+.cd-label { font-size: 10px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.08em; }
+.cd-sep { font-family: var(--font-head); font-size: 24px; opacity: 0.4; }
+.cd-goal { font-size: 12px; opacity: 0.8; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 18px; }
+.cd-goal strong { font-family: var(--font-head); font-size: 16px; display: block; }
+.layout { display: flex; min-height: calc(100vh - 100px); }
+nav {
+  width: 200px; background: var(--bg2); border-right: 1px solid var(--border);
+  padding: 1.5rem 0; flex-shrink: 0; position: sticky;
+  top: 100px; height: calc(100vh - 100px); overflow-y: auto;
+}
+.nav-section { padding: 0 1rem; margin-bottom: 1.5rem; }
+.nav-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 0 0.5rem; margin-bottom: 4px; }
+.nav-item {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+  border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--muted);
+  transition: all 0.15s; border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item i { font-size: 16px; }
+.nav-item:hover { background: rgba(123,16,52,0.08); color: var(--bordeaux); }
+.nav-item.active { background: var(--bordeaux); color: #fff; }
+main { flex: 1; padding: 2rem; overflow-x: hidden; }
+.page { display: none; }
+.page.active { display: block; }
+.page-title { font-family: var(--font-head); font-size: 28px; font-weight: 600; color: var(--bordeaux); margin-bottom: 1.5rem; }
+.card { background: var(--card); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+.card-title { font-family: var(--font-head); font-size: 17px; font-weight: 600; color: var(--bordeaux); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
+.metric { background: var(--bg); border-radius: 10px; padding: 14px 16px; border: 0.5px solid var(--border); }
+.metric-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+.metric-val { font-family: var(--font-head); font-size: 22px; font-weight: 600; }
+.pos { color: var(--success); } .neg { color: var(--danger); } .warn { color: var(--warn); }
+.hint { font-size: 12px; color: var(--muted); background: var(--light-pink); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: 0 8px 8px 0; margin-bottom: 1rem; line-height: 1.6; }
+.form-grid { display: grid; grid-template-columns: 1fr 120px 180px auto; gap: 8px; align-items: end; margin-bottom: 1rem; }
+label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+input[type=text], input[type=number], select {
+  padding: 8px 10px; border: 0.5px solid var(--border); border-radius: 7px;
+  font-size: 13px; font-family: var(--font-body); color: var(--text); background: #fff; width: 100%;
+}
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(194,24,91,0.08); }
+.btn { padding: 9px 18px; border: none; border-radius: 7px; font-family: var(--font-body); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--bordeaux); color: #fff; }
+.btn-primary:hover { background: var(--pink); }
+.btn-sm { padding: 5px 11px; font-size: 12px; }
+.btn-ghost { background: transparent; color: var(--bordeaux); border: 0.5px solid var(--border); }
+.btn-ghost:hover { background: var(--light-pink); }
+.btn-danger { background: transparent; color: var(--danger); border: 0.5px solid rgba(163,45,45,0.2); }
+.btn-danger:hover { background: #FCEBEB; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 700; color: var(--muted); border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg); }
+tfoot td { padding-top: 12px; font-weight: 700; border-top: 1px solid var(--border); border-bottom: none; }
+.editable { cursor: pointer; border-bottom: 1px dashed rgba(123,16,52,0.3); transition: border 0.15s; }
+.editable:hover { border-bottom-color: var(--accent); color: var(--bordeaux); }
+.edit-input { padding: 3px 7px; border: 1.5px solid var(--accent); border-radius: 5px; font-size: 13px; font-family: var(--font-body); color: var(--text); background: #fff; }
+.edit-hint { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-style: italic; }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.badge-pink { background: var(--light-pink); color: var(--bordeaux); }
+.badge-amber { background: #FAEEDA; color: #854F0B; }
+.schuld-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg); border-radius: 10px; margin-bottom: 8px; border: 0.5px solid var(--border); }
+.progress-bar { background: var(--bg2); border-radius: 20px; height: 6px; overflow: hidden; margin: 5px 0; }
+.progress-fill { height: 100%; border-radius: 20px; background: var(--bordeaux); transition: width 0.4s; }
+.konto-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.konto-card { padding: 14px 16px; border-radius: 10px; background: var(--card); border: 0.5px solid var(--border); border-left: 4px solid var(--bordeaux); }
+.konto-card.green { border-left-color: #639922; }
+.konto-card.amber { border-left-color: #BA7517; }
+.konto-card.pink { border-left-color: var(--pink); }
+.konto-card.gray { border-left-color: #888; }
+.konto-card.teal { border-left-color: #1D9E75; }
+.konto-name { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.konto-desc { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.konto-betrag { font-family: var(--font-head); font-size: 16px; font-weight: 600; color: var(--bordeaux); }
+.tipp-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; line-height: 1.6; }
+.tipp-item:last-child { border-bottom: none; }
+.upload-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all 0.15s; background: var(--bg); }
+.upload-zone:hover { border-color: var(--accent); background: var(--light-pink); }
+.chart-wrap { position: relative; height: 220px; }
+.loading-overlay { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--muted); font-size: 14px; gap: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🌿 Mein Finanzplaner</h1>
+    <div class="subtitle">Persönlich · Privat · Fühlkraft</div>
+  </div>
+  <div id="save-status" class="save-status saved">
+    <i class="ti ti-device-floppy"></i> Verbunden
+  </div>
+</header>
+
+<div class="countdown-banner">
+  <div class="cd-block"><div class="cd-num" id="cd-days">–</div><div class="cd-label">Tage</div></div>
+  <div class="cd-sep">·</div>
+  <div class="cd-block"><div class="cd-num" id="cd-hours">–</div><div class="cd-label">Stunden</div></div>
+  <div class="cd-sep">·</div>
+  <div class="cd-block"><div class="cd-num" id="cd-mins">–</div><div class="cd-label">Minuten</div></div>
+  <div class="cd-goal"><strong>27. August 2025</strong>Schuldenfrei &amp; 50 🎂</div>
+</div>
+
+<div class="layout">
+  <nav>
+    <div class="nav-section">
+      <div class="nav-label">Übersicht</div>
+      <button class="nav-item active" onclick="showPage('dashboard',this)"><i class="ti ti-home"></i> Dashboard</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Meine Finanzen</div>
+      <button class="nav-item" onclick="showPage('einnahmen',this)"><i class="ti ti-cash"></i> Einnahmen</button>
+      <button class="nav-item" onclick="showPage('ausgaben',this)"><i class="ti ti-receipt"></i> Ausgaben</button>
+      <button class="nav-item" onclick="showPage('schulden',this)"><i class="ti ti-alert-circle"></i> Schulden</button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Planung</div>
+      <button class="nav-item" onclick="showPage('unterkonten',this)"><i class="ti ti-building-bank"></i> Unterkonten</button>
+      <button class="nav-item" onclick="showPage('upload',this)"><i class="ti ti-camera"></i> Foto-Import</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-title">Meine Übersicht</div>
+      <div class="metric-grid">
+        <div class="metric"><div class="metric-label">Einnahmen / Monat</div><div class="metric-val pos" id="d-ein">0,00 €</div></div>
+        <div class="metric"><div class="metric-label">Ausgaben / Monat</div><div class="metric-val neg" id="d-aus">0,00 €</div></div>
+        <div class="metric"><div class="metric-label">Wirklich verfügbar</div><div class="metric-val" id="d-rest">0,00 €</div></div>
+        <div class="metric"><div class="metric-label">Schulden gesamt</div><div class="metric-val neg" id="d-schuld">0,00 €</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+        <div class="card">
+          <div class="card-title"><i class="ti ti-chart-pie"></i> Ausgaben nach Bereich</div>
+          <div class="chart-wrap"><canvas id="dashChart" role="img" aria-label="Ausgaben nach Kategorie"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="ti ti-trending-down"></i> Schuldentilgung</div>
+          <div id="d-schulden-prog"><p style="font-size:13px;color:var(--muted)">Noch keine Schulden eingetragen.</p></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-bulb"></i> Optimierungsvorschläge</div>
+        <div id="d-tipps"></div>
+      </div>
+    </div>
+
+    <!-- EINNAHMEN -->
+    <div id="page-einnahmen" class="page">
+      <div class="page-title">Einnahmen</div>
+      <div class="hint">Gehalt ist optional. Selbständigkeit (Fühlkraft) kann separat erfasst werden.</div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-plus"></i> Neue Einnahme</div>
+        <div class="form-grid">
+          <div><label>Bezeichnung</label><input type="text" id="ein-name" placeholder="z.B. Gehalt, Fühlkraft"></div>
+          <div><label>€ / Monat</label><input type="number" id="ein-betrag" placeholder="0,00" step="0.01"></div>
+          <div><label>Typ</label>
+            <select id="ein-typ">
+              <option>Gehalt (optional)</option>
+              <option>Selbständigkeit Fühlkraft</option>
+              <option>Kindergeld</option>
+              <option>Sonstiges</option>
+            </select>
+          </div>
+          <div><label>&nbsp;</label><button class="btn btn-primary btn-sm" onclick="addEinnahme()"><i class="ti ti-plus"></i> Hinzufügen</button></div>
+        </div>
+        <div class="edit-hint"><i class="ti ti-pencil"></i> Klicke auf einen unterstrichenen Wert um ihn zu bearbeiten. Enter = Speichern, Escape = Abbrechen.</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Bezeichnung</th><th>Typ</th><th>€ / Monat</th><th style="width:60px"></th></tr></thead>
+            <tbody id="ein-body"></tbody>
+            <tfoot><tr><td colspan="2" style="color:var(--muted);font-size:12px;">Gesamt</td><td id="ein-summe" style="color:var(--success)">0,00 €</td><td></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUSGABEN -->
+    <div id="page-ausgaben" class="page">
+      <div class="page-title">Ausgaben</div>
+      <div class="hint">Alle fixen und variablen Ausgaben — Tiere, Haus, Handy, und alles was geschäftlich von privat läuft.</div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-plus"></i> Neue Ausgabe</div>
+        <div class="form-grid">
+          <div><label>Bezeichnung</label><input type="text" id="aus-name" placeholder="z.B. Heu für Pferde"></div>
+          <div><label>€ / Monat</label><input type="number" id="aus-betrag" placeholder="0,00" step="0.01"></div>
+          <div><label>Kategorie</label>
+            <select id="aus-kat">
+              <option>🐴 Pferde (3)</option>
+              <option>🐱 Katzen (2)</option>
+              <option>🐶 Hund (1)</option>
+              <option>🦆 Laufenten (7)</option>
+              <option>🏠 Haus & Grundstück</option>
+              <option>🛒 Lebensmittel</option>
+              <option>🚗 Auto & Fahrtkosten</option>
+              <option>📱 Handy & Internet</option>
+              <option>💼 Geschäftlich (läuft privat)</option>
+              <option>🛍️ Amazon (Problem-Konto)</option>
+              <option>📺 Abo & Streaming</option>
+              <option>👗 Kleidung & Persönliches</option>
+              <option>💊 Gesundheit</option>
+              <option>🎓 Fortbildung / Kurse</option>
+              <option>🎁 Geschenke & Soziales</option>
+              <option>💈 Friseur & Pflege</option>
+              <option>📦 Sonstiges</option>
+            </select>
+          </div>
+          <div><label>&nbsp;</label><button class="btn btn-primary btn-sm" onclick="addAusgabe()"><i class="ti ti-plus"></i> Hinzufügen</button></div>
+        </div>
+        <div class="edit-hint"><i class="ti ti-pencil"></i> Klicke auf einen unterstrichenen Wert um ihn zu bearbeiten.</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Bezeichnung</th><th>Kategorie</th><th>€ / Monat</th><th style="width:60px"></th></tr></thead>
+            <tbody id="aus-body"></tbody>
+            <tfoot><tr><td colspan="2" style="color:var(--muted);font-size:12px;">Gesamt</td><td id="aus-summe" style="color:var(--danger)">0,00 €</td><td></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHULDEN -->
+    <div id="page-schulden" class="page">
+      <div class="page-title">Schulden</div>
+      <div class="hint">Trage alle offenen Schulden ein. Ich berechne automatisch wie viel du monatlich brauchst um bis 27.08.2025 schuldenfrei zu sein.</div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-plus"></i> Neue Schuld eintragen</div>
+        <div class="form-grid">
+          <div><label>An wen / Wofür</label><input type="text" id="sch-name" placeholder="z.B. Klarna, Mama, PayPal"></div>
+          <div><label>Offener Betrag (€)</label><input type="number" id="sch-betrag" placeholder="0,00" step="0.01"></div>
+          <div><label>Typ</label>
+            <select id="sch-typ">
+              <option>Klarna</option>
+              <option>PayPal Ratenzahlung</option>
+              <option>Geliehen (Familie)</option>
+              <option>Kurs / Coaching</option>
+              <option>Amazon</option>
+              <option>Kreditkarte</option>
+              <option>Sonstiges</option>
+            </select>
+          </div>
+          <div><label>&nbsp;</label><button class="btn btn-primary btn-sm" onclick="addSchuld()"><i class="ti ti-plus"></i> Hinzufügen</button></div>
+        </div>
+        <div class="edit-hint"><i class="ti ti-pencil"></i> Klicke auf einen unterstrichenen Betrag um ihn zu korrigieren.</div>
+        <div id="sch-liste"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 4px;border-top:1px solid var(--border);margin-top:8px;">
+          <span style="font-size:13px;color:var(--muted);">Gesamt offen:</span>
+          <span style="font-family:var(--font-head);font-size:20px;font-weight:600;color:var(--danger);" id="sch-gesamt">0,00 €</span>
+        </div>
+        <div id="tilgungsplan" style="display:none;background:var(--light-pink);border-radius:8px;padding:12px 14px;margin-top:12px;font-size:13px;line-height:1.7;border-left:3px solid var(--accent);"></div>
+      </div>
+    </div>
+
+    <!-- UNTERKONTEN -->
+    <div id="page-unterkonten" class="page">
+      <div class="page-title">Unterkonten</div>
+      <div class="hint">Gehalt kommt aufs Hauptkonto → Daueraufträge verteilen es automatisch → jedes Konto hat genau eine Aufgabe.</div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-building-bank"></i> Empfohlene Unterkonten für dich</div>
+        <div class="konto-grid" id="konto-grid"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
+          <i class="ti ti-info-circle"></i> DKB, N26, Revolut und Sparkasse bieten kostenlose Unterkonten oder "Spaces" an. Dauerauftrag am 1. des Monats einrichten.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-calculator"></i> Verteilung simulieren</div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;">
+          <div style="flex:1;"><label>Monatliche Gesamteinnahmen (€)</label><input type="number" id="sim-ein" placeholder="z.B. 3500" step="0.01"></div>
+          <div style="align-self:flex-end;"><button class="btn btn-primary" onclick="simuliere()"><i class="ti ti-chart-bar"></i> Berechnen</button></div>
+        </div>
+        <div id="sim-result"></div>
+      </div>
+    </div>
+
+    <!-- FOTO IMPORT -->
+    <div id="page-upload" class="page">
+      <div class="page-title">Foto-Import</div>
+      <div class="hint">Foto von Kontoauszug oder Rechnung hochladen → KI liest alle Beträge aus → du übernimmst sie mit einem Klick.</div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-camera"></i> Beleg hochladen</div>
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+          <i class="ti ti-photo-up" style="font-size:36px;color:var(--accent)"></i>
+          <div style="margin-top:10px;font-weight:700;color:var(--bordeaux);">Foto hier ablegen oder klicken</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">JPG, PNG · Kontoauszug, Rechnung, Quittung</div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFile(event)">
+        <div id="upload-preview" style="margin-top:1rem;"></div>
+        <button class="btn btn-primary" id="btn-analyse" style="display:none;margin-top:12px;" onclick="analysiereBeleg()">
+          <i class="ti ti-wand"></i> KI analysiert den Beleg
+        </button>
+        <div id="ki-status" style="margin-top:8px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-list-check"></i> Erkannte Positionen</div>
+        <div id="erkannte" style="font-size:13px;color:var(--muted);">Lade ein Foto hoch um Positionen zu erkennen.</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── SUPABASE CONFIG ──────────────────────────────────────────────
+const SUPABASE_URL = 'https://mlwwdgnkqgmzpvlypczy.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_03_aDbYNmAMzgEyBtaWLrQ_otMao1fQ';
+
+const api = (path, method='GET', body=null) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  method,
+  headers: {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal'
+  },
+  body: body ? JSON.stringify(body) : null
+}).then(r => r.ok ? (r.status === 204 ? null : r.json()) : r.json().then(e => { throw new Error(e.message || 'API Fehler'); }));
+
+// ── STATE ────────────────────────────────────────────────────────
+let state = { einnahmen: [], ausgaben: [], schulden: [] };
+
+function setStatus(type, msg) {
+  const el = document.getElementById('save-status');
+  el.className = 'save-status ' + type;
+  el.innerHTML = `<i class="ti ti-${type==='saved'?'device-floppy':type==='saving'?'loader':'wifi-off'}"></i> ${msg}`;
+}
+
+// ── LOAD FROM SUPABASE ───────────────────────────────────────────
+async function loadAll() {
+  setStatus('saving', 'Lade Daten...');
+  try {
+    const [ein, aus, sch] = await Promise.all([
+      api('einnahmen?select=*&order=created_at'),
+      api('ausgaben?select=*&order=created_at'),
+      api('schulden?select=*&order=created_at')
+    ]);
+    state.einnahmen = ein || [];
+    state.ausgaben = aus || [];
+    state.schulden = sch || [];
+    setStatus('saved', 'Geladen ✓');
+    renderEin(); renderAus(); renderSch(); updateDashboard();
+  } catch(e) {
+    setStatus('error', 'Fehler beim Laden');
+    console.error(e);
+  }
+}
+
+// ── COUNTDOWN ────────────────────────────────────────────────────
+function updateCountdown() {
+  const diff = new Date('2025-08-27T00:00:00') - new Date();
+  if (diff <= 0) { document.getElementById('cd-days').textContent='🎉'; return; }
+  document.getElementById('cd-days').textContent = Math.floor(diff/86400000);
+  document.getElementById('cd-hours').textContent = Math.floor((diff%86400000)/3600000);
+  document.getElementById('cd-mins').textContent = Math.floor((diff%3600000)/60000);
+}
+updateCountdown(); setInterval(updateCountdown, 60000);
+
+// ── NAV ──────────────────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  updateDashboard();
+}
+
+// ── FORMAT ───────────────────────────────────────────────────────
+function fmt(n) { return Number(n||0).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+
+// ── INLINE EDIT ──────────────────────────────────────────────────
+function makeEditable(el, arr, id, field, isNum) {
+  el.classList.add('editable');
+  el.onclick = () => {
+    const idx = state[arr].findIndex(x=>x.id===id);
+    if (idx < 0) return;
+    const old = state[arr][idx][field];
+    const inp = document.createElement('input');
+    inp.className = 'edit-input';
+    inp.type = isNum ? 'number' : 'text';
+    if (isNum) inp.step = '0.01';
+    inp.value = old;
+    inp.style.width = isNum ? '100px' : Math.max(100, String(old).length*9)+'px';
+    el.replaceWith(inp); inp.focus(); inp.select();
+    const save = async () => {
+      const v = isNum ? parseFloat(inp.value) : inp.value.trim();
+      const val = isNum ? (isNaN(v)||v<0?old:v) : (v||old);
+      state[arr][idx][field] = val;
+      setStatus('saving','Speichert...');
+      try {
+        await api(`${arr}?id=eq.${id}`, 'PATCH', {[field]: val});
+        setStatus('saved','Gespeichert ✓');
+      } catch(e) { setStatus('error','Fehler'); }
+      if(arr==='einnahmen') renderEin(); else if(arr==='ausgaben') renderAus(); else renderSch();
+    };
+    inp.addEventListener('blur', save);
+    inp.addEventListener('keydown', e=>{if(e.key==='Enter')inp.blur(); if(e.key==='Escape'){state[arr][idx][field]=old; inp.blur();}});
+  };
+}
+
+// ── EINNAHMEN ────────────────────────────────────────────────────
+async function addEinnahme() {
+  const name = document.getElementById('ein-name').value.trim();
+  const betrag = parseFloat(document.getElementById('ein-betrag').value)||0;
+  const typ = document.getElementById('ein-typ').value;
+  if (!name||!betrag) return;
+  setStatus('saving','Speichert...');
+  try {
+    const res = await api('einnahmen', 'POST', {name, betrag, typ});
+    state.einnahmen.push(res[0]);
+    document.getElementById('ein-name').value='';
+    document.getElementById('ein-betrag').value='';
+    setStatus('saved','Gespeichert ✓');
+    renderEin();
+  } catch(e) { setStatus('error','Fehler: '+e.message); }
+}
+
+function renderEin() {
+  const body = document.getElementById('ein-body');
+  body.innerHTML=''; let sum=0;
+  state.einnahmen.forEach(e => {
+    sum += Number(e.betrag);
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td><span>${e.name}</span></td><td><span class="badge badge-pink">${e.typ}</span></td><td><span>${fmt(e.betrag)}</span></td><td><button class="btn btn-danger btn-sm" onclick="delItem('einnahmen','${e.id}')"><i class="ti ti-trash"></i></button></td>`;
+    makeEditable(tr.querySelector('td:nth-child(1) span'),'einnahmen',e.id,'name',false);
+    makeEditable(tr.querySelector('td:nth-child(3) span'),'einnahmen',e.id,'betrag',true);
+    body.appendChild(tr);
+  });
+  document.getElementById('ein-summe').textContent=fmt(sum);
+  updateDashboard();
+}
+
+// ── AUSGABEN ─────────────────────────────────────────────────────
+async function addAusgabe() {
+  const name = document.getElementById('aus-name').value.trim();
+  const betrag = parseFloat(document.getElementById('aus-betrag').value)||0;
+  const kat = document.getElementById('aus-kat').value;
+  if (!name||!betrag) return;
+  setStatus('saving','Speichert...');
+  try {
+    const res = await api('ausgaben', 'POST', {name, betrag, kat});
+    state.ausgaben.push(res[0]);
+    document.getElementById('aus-name').value='';
+    document.getElementById('aus-betrag').value='';
+    setStatus('saved','Gespeichert ✓');
+    renderAus();
+  } catch(e) { setStatus('error','Fehler: '+e.message); }
+}
+
+function renderAus() {
+  const body = document.getElementById('aus-body');
+  body.innerHTML=''; let sum=0;
+  state.ausgaben.forEach(a => {
+    sum += Number(a.betrag);
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td><span>${a.name}</span></td><td><span class="badge badge-pink">${a.kat}</span></td><td><span style="color:var(--danger)">${fmt(a.betrag)}</span></td><td><button class="btn btn-danger btn-sm" onclick="delItem('ausgaben','${a.id}')"><i class="ti ti-trash"></i></button></td>`;
+    makeEditable(tr.querySelector('td:nth-child(1) span'),'ausgaben',a.id,'name',false);
+    makeEditable(tr.querySelector('td:nth-child(3) span'),'ausgaben',a.id,'betrag',true);
+    body.appendChild(tr);
+  });
+  document.getElementById('aus-summe').textContent=fmt(sum);
+  updateDashboard();
+}
+
+// ── SCHULDEN ─────────────────────────────────────────────────────
+async function addSchuld() {
+  const name = document.getElementById('sch-name').value.trim();
+  const betrag = parseFloat(document.getElementById('sch-betrag').value)||0;
+  const typ = document.getElementById('sch-typ').value;
+  if (!name||!betrag) return;
+  setStatus('saving','Speichert...');
+  try {
+    const res = await api('schulden', 'POST', {name, betrag, typ, bezahlt: 0});
+    state.schulden.push(res[0]);
+    document.getElementById('sch-name').value='';
+    document.getElementById('sch-betrag').value='';
+    setStatus('saved','Gespeichert ✓');
+    renderSch();
+  } catch(e) { setStatus('error','Fehler: '+e.message); }
+}
+
+async function zahleAb(id) {
+  const inp = document.getElementById('zahl-'+id);
+  const v = parseFloat(inp.value)||0;
+  if (v<=0) return;
+  const idx = state.schulden.findIndex(s=>s.id===id);
+  if (idx<0) return;
+  const neu = Math.min(state.schulden[idx].betrag, (state.schulden[idx].bezahlt||0)+v);
+  setStatus('saving','Speichert...');
+  try {
+    await api(`schulden?id=eq.${id}`, 'PATCH', {bezahlt: neu});
+    state.schulden[idx].bezahlt = neu;
+    if (neu >= state.schulden[idx].betrag) {
+      await api(`schulden?id=eq.${id}`, 'DELETE');
+      state.schulden.splice(idx,1);
+    }
+    inp.value='';
+    setStatus('saved','Gespeichert ✓');
+    renderSch();
+  } catch(e) { setStatus('error','Fehler'); }
+}
+
+function renderSch() {
+  const liste = document.getElementById('sch-liste');
+  let gesamt=0;
+  liste.innerHTML = state.schulden.map(s => {
+    const offen = Number(s.betrag)-(Number(s.bezahlt)||0);
+    gesamt += offen;
+    const pct = s.betrag>0 ? Math.min(100,Math.round(((s.bezahlt||0)/s.betrag)*100)) : 0;
+    return `<div class="schuld-item">
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:700;">${s.name} <span class="badge badge-amber">${s.typ}</span></div>
+        <div style="font-size:12px;color:var(--muted);margin:3px 0;">
+          Offen: <strong><span id="offen-${s.id}" class="editable">${fmt(offen)}</span></strong>
+          ${s.bezahlt>0?' · Bezahlt: '+fmt(s.bezahlt):''}
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div style="font-size:11px;color:var(--muted);">${pct}% abbezahlt</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:120px;">
+        <input type="number" placeholder="Zahlung €" step="0.01" style="width:110px;" id="zahl-${s.id}">
+        <button class="btn btn-primary btn-sm" onclick="zahleAb('${s.id}')"><i class="ti ti-minus"></i> Abbuchen</button>
+        <button class="btn btn-danger btn-sm" onclick="delItem('schulden','${s.id}')"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+
+  state.schulden.forEach(s => {
+    const el = document.getElementById('offen-'+s.id);
+    if (el) makeEditable(el,'schulden',s.id,'betrag',true);
+  });
+
+  document.getElementById('sch-gesamt').textContent=fmt(gesamt);
+  const box=document.getElementById('tilgungsplan');
+  if (gesamt>0) {
+    const monate=Math.max(1,Math.ceil((new Date('2025-08-27')-new Date())/(1000*60*60*24*30.44)));
+    box.style.display='block';
+    box.innerHTML=`<strong>Tilgungsplan:</strong> Noch <strong>${monate} Monate</strong> bis 27.08.2025.<br>Du brauchst <strong style="color:var(--bordeaux);font-size:15px;">${fmt(gesamt/monate)} pro Monat</strong> um pünktlich schuldenfrei zu sein. 💪`;
+  } else { box.style.display='none'; }
+  updateDashboard();
+}
+
+// ── DELETE ───────────────────────────────────────────────────────
+async function delItem(arr, id) {
+  if (!confirm('Eintrag wirklich löschen?')) return;
+  setStatus('saving','Löscht...');
+  try {
+    await api(`${arr}?id=eq.${id}`, 'DELETE');
+    state[arr] = state[arr].filter(x=>x.id!==id);
+    setStatus('saved','Gelöscht ✓');
+    if(arr==='einnahmen') renderEin(); else if(arr==='ausgaben') renderAus(); else renderSch();
+  } catch(e) { setStatus('error','Fehler'); }
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────
+let chartInst=null;
+function updateDashboard() {
+  const einSum=state.einnahmen.reduce((a,e)=>a+Number(e.betrag),0);
+  const ausSum=state.ausgaben.reduce((a,e)=>a+Number(e.betrag),0);
+  const schSum=state.schulden.reduce((a,s)=>a+(Number(s.betrag)-(Number(s.bezahlt)||0)),0);
+  const rest=einSum-ausSum;
+  document.getElementById('d-ein').textContent=fmt(einSum);
+  document.getElementById('d-aus').textContent=fmt(ausSum);
+  document.getElementById('d-schuld').textContent=fmt(schSum);
+  const rEl=document.getElementById('d-rest');
+  rEl.textContent=fmt(rest); rEl.className='metric-val '+(rest>=0?'pos':'neg');
+
+  const katMap={};
+  state.ausgaben.forEach(a=>{katMap[a.kat]=(katMap[a.kat]||0)+Number(a.betrag);});
+  const labels=Object.keys(katMap), data=Object.values(katMap);
+  const colors=['#7B1034','#C2185B','#D4537E','#854F0B','#BA7517','#3B6D11','#639922','#185FA5','#378ADD','#A32D2D','#534AB7','#1D9E75','#888780'];
+  if(chartInst) chartInst.destroy();
+  if(labels.length>0) {
+    chartInst=new Chart(document.getElementById('dashChart').getContext('2d'),{
+      type:'doughnut',
+      data:{labels,datasets:[{data,backgroundColor:colors.slice(0,labels.length),borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12,padding:8}}}}
+    });
+  }
+
+  const prog=document.getElementById('d-schulden-prog');
+  prog.innerHTML=state.schulden.length===0
+    ?'<p style="font-size:13px;color:var(--muted)">Noch keine Schulden eingetragen.</p>'
+    :state.schulden.map(s=>{
+      const offen=Number(s.betrag)-(Number(s.bezahlt)||0);
+      const pct=Math.min(100,Math.round(((s.bezahlt||0)/s.betrag)*100));
+      return `<div style="margin-bottom:10px;"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>${s.name}</span><span style="color:var(--danger);font-weight:700;">${fmt(offen)}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div></div>`;
+    }).join('');
+
+  const tipps=[];
+  if(einSum===0) tipps.push({icon:'⚡',text:'Trage zuerst deine Einnahmen ein — dann kann ich dir zeigen was wirklich übrig bleibt.'});
+  if(ausSum>einSum&&einSum>0) tipps.push({icon:'🚨',text:`Ausgaben (${fmt(ausSum)}) übersteigen Einnahmen (${fmt(einSum)}). Schaue welche Kategorien du reduzieren kannst.`});
+  const amazon=state.ausgaben.filter(a=>a.kat.includes('Amazon')).reduce((s,a)=>s+Number(a.betrag),0);
+  if(amazon>0) tipps.push({icon:'🛍️',text:`Amazon läuft noch von Privat (${fmt(amazon)}/Monat). Ein eigenes Geschäftskonto macht Privat & Geschäftlich sauber trennbar.`});
+  if(state.schulden.length>1) tipps.push({icon:'💡',text:'Schneeball-Strategie: Zuerst die kleinste Schuld abbezahlen → Erfolgserlebnis → Motivation für die nächste!'});
+  if(rest>0&&schSum>0){const m=Math.max(1,Math.ceil((new Date('2025-08-27')-new Date())/(1000*60*60*24*30.44)));tipps.push({icon:'✅',text:`Du hast ${fmt(rest)}/Monat verfügbar. Für das Ziel brauchst du ${fmt(schSum/m)}/Monat Tilgung — ${rest>=schSum/m?'das reicht! 🎉':'noch etwas knapp, aber machbar!'}`});}
+  if(tipps.length===0) tipps.push({icon:'🌿',text:'Alles sieht gut aus! Du bist auf dem richtigen Weg.'});
+  document.getElementById('d-tipps').innerHTML=tipps.map(t=>`<div class="tipp-item"><span style="font-size:16px;flex-shrink:0;">${t.icon}</span><span>${t.text}</span></div>`).join('');
+
+  const tierAus=state.ausgaben.filter(a=>['🐴 Pferde (3)','🐱 Katzen (2)','🐶 Hund (1)','🦆 Laufenten (7)'].includes(a.kat)).reduce((s,a)=>s+Number(a.betrag),0);
+  const hausAus=state.ausgaben.filter(a=>a.kat==='🏠 Haus & Grundstück').reduce((s,a)=>s+Number(a.betrag),0);
+  const bizAus=state.ausgaben.filter(a=>a.kat.includes('Amazon')||a.kat.includes('Geschäftlich')).reduce((s,a)=>s+Number(a.betrag),0);
+  const alltagAus=state.ausgaben.filter(a=>['🛒 Lebensmittel','🚗 Auto & Fahrtkosten','📱 Handy & Internet','📺 Abo & Streaming','👗 Kleidung & Persönliches','💊 Gesundheit','🎁 Geschenke & Soziales','💈 Friseur & Pflege'].includes(a.kat)).reduce((s,a)=>s+Number(a.betrag),0);
+  const monate=Math.max(1,Math.ceil((new Date('2025-08-27')-new Date())/(1000*60*60*24*30.44)));
+  const schMonat=schSum>0?schSum/monate:0;
+  const konten=[
+    {emoji:'🐴',name:'Tierkonto',desc:'Pferde, Hund, Katzen, Enten',betrag:tierAus,cls:'',color:'var(--bordeaux)'},
+    {emoji:'🏠',name:'Hauskonto',desc:'Nebenkosten, Reparaturen, Grundstück',betrag:hausAus,cls:'green',color:'#3B6D11'},
+    {emoji:'⚡',name:'Schuldenkonto',desc:'Klarna, PayPal, Mama, Kurs Roxi',betrag:schMonat,cls:'amber',color:'#BA7517'},
+    {emoji:'💼',name:'Business-Puffer',desc:'Amazon, Tools, Geschäftliches',betrag:bizAus,cls:'pink',color:'var(--pink)'},
+    {emoji:'🛒',name:'Lebenshaltung',desc:'Einkaufen, Handy, Tanken, Alltag',betrag:alltagAus,cls:'gray',color:'#5F5E5A'},
+    {emoji:'🌱',name:'Notgroschen',desc:'Ziel: 3× Monatsausgaben als Puffer',betrag:ausSum*3,cls:'teal',color:'#1D9E75'},
+  ];
+  document.getElementById('konto-grid').innerHTML=konten.map(k=>`<div class="konto-card ${k.cls}"><div class="konto-name">${k.emoji} ${k.name}</div><div class="konto-desc">${k.desc}</div><div class="konto-betrag" style="color:${k.color}">${k.betrag>0?fmt(k.betrag)+(k.name==='Notgroschen'?' Ziel':'/Monat'):'– noch nichts eingetragen'}</div></div>`).join('');
+}
+
+function simuliere() {
+  const ein=parseFloat(document.getElementById('sim-ein').value)||0;
+  if(!ein) return;
+  const ausSum=state.ausgaben.reduce((a,e)=>a+Number(e.betrag),0);
+  const schSum=state.schulden.reduce((a,s)=>a+(Number(s.betrag)-(Number(s.bezahlt)||0)),0);
+  const mon=Math.max(1,Math.ceil((new Date('2025-08-27')-new Date())/(1000*60*60*24*30.44)));
+  const tilgung=schSum/mon; const rest=ein-ausSum-tilgung;
+  document.getElementById('sim-result').innerHTML=`
+    <div class="metric-grid">
+      <div class="metric"><div class="metric-label">Einnahmen</div><div class="metric-val pos">${fmt(ein)}</div></div>
+      <div class="metric"><div class="metric-label">Ausgaben</div><div class="metric-val neg">${fmt(ausSum)}</div></div>
+      <div class="metric"><div class="metric-label">Tilgung/Monat</div><div class="metric-val warn">${fmt(tilgung)}</div></div>
+      <div class="metric"><div class="metric-label">Wirklich frei</div><div class="metric-val ${rest>=0?'pos':'neg'}">${fmt(rest)}</div></div>
+    </div>
+    <div style="background:${rest>=0?'#EAF3DE':'#FCEBEB'};border-left:3px solid ${rest>=0?'#3B6D11':'#A32D2D'};padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;color:${rest>=0?'#3B6D11':'#A32D2D'};margin-top:8px;">
+      ${rest>=0?'✅ Es reicht! Daueraufträge für jedes Unterkonto einrichten.':'⚠️ Einnahmen reichen noch nicht. Ausgaben kürzen oder Zeitraum anpassen.'}
+    </div>`;
+}
+
+// ── FOTO IMPORT ──────────────────────────────────────────────────
+let uploadedImageData=null;
+function handleFile(e) {
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    uploadedImageData=ev.target.result;
+    document.getElementById('upload-preview').innerHTML=`<img src="${uploadedImageData}" style="max-width:100%;max-height:300px;border-radius:10px;border:0.5px solid var(--border);">`;
+    document.getElementById('btn-analyse').style.display='inline-flex';
+  };
+  reader.readAsDataURL(file);
+}
+async function analysiereBeleg() {
+  if(!uploadedImageData) return;
+  document.getElementById('ki-status').innerHTML='<div style="font-size:13px;color:var(--muted);">⏳ KI analysiert den Beleg...</div>';
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:uploadedImageData.split(';')[0].split(':')[1],data:uploadedImageData.split(',')[1]}},{type:'text',text:'Analysiere diesen Beleg auf Deutsch. Antworte NUR in JSON: {"positionen":[{"name":"...","betrag":12.50,"kategorie":"..."}],"gesamt":99.99}. Kategorien: Pferde/Tiere, Haus, Lebensmittel, Handy/Internet, Geschäftlich, Kleidung, Gesundheit, Sonstiges.'}]}]})});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(text);
+    document.getElementById('ki-status').innerHTML=`<div style="background:#EAF3DE;border-radius:8px;padding:10px;font-size:13px;color:#3B6D11;">✅ ${parsed.positionen?.length||0} Positionen erkannt · Gesamt: ${fmt(parsed.gesamt||0)}</div>`;
+    const katMap2={'Pferde':'🐴 Pferde (3)','Tiere':'🐱 Katzen (2)','Haus':'🏠 Haus & Grundstück','Lebensmittel':'🛒 Lebensmittel','Handy':'📱 Handy & Internet','Internet':'📱 Handy & Internet','Geschäftlich':'💼 Geschäftlich (läuft privat)','Kleidung':'👗 Kleidung & Persönliches','Gesundheit':'💊 Gesundheit'};
+    if(parsed.positionen?.length){
+      let html='<div class="table-wrap"><table><thead><tr><th>Bezeichnung</th><th>Kategorie</th><th>Betrag</th><th>Übernehmen</th></tr></thead><tbody>';
+      parsed.positionen.forEach(p=>{const kat=Object.entries(katMap2).find(([k])=>p.kategorie?.includes(k))?.[1]||'📦 Sonstiges'; html+=`<tr><td>${p.name}</td><td><span class="badge badge-pink">${kat}</span></td><td style="font-weight:700">${fmt(p.betrag)}</td><td><button class="btn btn-primary btn-sm" onclick='importPos(${JSON.stringify({name:p.name,betrag:p.betrag,kat})})'>+ Ausgabe</button></td></tr>`;});
+      document.getElementById('erkannte').innerHTML=html+'</tbody></table></div>';
+    }
+  } catch(e){document.getElementById('ki-status').innerHTML='<div style="font-size:13px;color:var(--danger);">Fehler. Bitte erneut versuchen.</div>';}
+}
+async function importPos(p) {
+  const res=await api('ausgaben','POST',{name:p.name,betrag:p.betrag,kat:p.kat});
+  state.ausgaben.push(res[0]); renderAus();
+  alert(`"${p.name}" wurde zu deinen Ausgaben hinzugefügt! ✅`);
+}
+
+// ── START ────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
