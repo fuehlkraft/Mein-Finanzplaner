@@ -382,7 +382,7 @@ tfoot td { padding-top: 12px; font-weight: 700; border-top: 1px solid var(--bord
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ── PASSWORT ─────────────────────────────────────────────────────
-const PASSWORT = '270901#';
+const PASSWORT = 'MEINPASSWORT';
 
 function checkLogin() {
   if (document.getElementById('pw-input').value === PASSWORT) {
@@ -406,7 +406,7 @@ function init() { loadSettings(); loadAll(); updateCountdown(); setInterval(upda
 
 // ── SETTINGS (localStorage) ───────────────────────────────────────
 function loadSettings() {
-  const apiKey = const apiKey = 'DEINKEY'; || '';
+  const apiKey = localStorage.getItem('fp_api_key') || '';
   document.getElementById('api-key-input').value = apiKey;
   if (apiKey) document.getElementById('api-key-status').innerHTML = '✅ API-Key gespeichert';
 
@@ -430,7 +430,7 @@ function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key) { alert('Bitte zuerst den API-Key eintragen!'); return; }
   localStorage.setItem('fp_api_key', key);
-  const apiKey = 'DEINKEY';
+  const check = localStorage.getItem('fp_api_key');
   if (check) {
     document.getElementById('api-key-status').innerHTML = '✅ API-Key gespeichert!';
     document.getElementById('no-api-warning').style.display = 'none';
@@ -773,7 +773,7 @@ function handleFile(e){
   reader.readAsDataURL(file);
 }
 async function analysiereBeleg(){
-  const apiKey = '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'; // <-- hier deinen sk-ant-... Key eintragen
+  const apiKey = 'MEIN-API-KEY'; // <-- hier deinen sk-ant-... Key eintragen
   if(!uploadedImageData)return;
   document.getElementById('ki-status').innerHTML='<div style="font-size:13px;color:var(--muted);">⏳ KI analysiert den Beleg...</div>';
   try{
