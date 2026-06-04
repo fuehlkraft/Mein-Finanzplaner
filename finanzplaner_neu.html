@@ -430,7 +430,7 @@ function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key) { alert('Bitte zuerst den API-Key eintragen!'); return; }
   localStorage.setItem('fp_api_key', key);
-  const check = const apiKey = 'DEINKEY';
+  const apiKey = 'DEINKEY';
   if (check) {
     document.getElementById('api-key-status').innerHTML = '✅ API-Key gespeichert!';
     document.getElementById('no-api-warning').style.display = 'none';
