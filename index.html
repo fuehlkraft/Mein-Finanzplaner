@@ -1223,14 +1223,37 @@ function parseCsv(text) {
     const numBetrag = parseFloat(rawBetrag.replace(/\./g,'').replace(',','.').replace(/[^0-9.,\-]/g,'')) || 0;
     if (numBetrag === 0) return;
 
-    // Get name: prefer Verwendungszweck, fallback to partner name
+    // Detect if Ausgabe:
+    // 1. Negative number = Ausgabe
+    // 2. Sparkasse CAMT: positive numbers but "Glaeubiger-ID" filled = Lastschrift = Ausgabe
+    //    OR check a "Soll"/"Haben" column if present
+    const sollIdx = header.findIndex(h => h === 'soll' || h === 'sollbetrag');
+    const habenIdx = header.findIndex(h => h === 'haben' || h === 'habenbetrag');
+    let isAusgabe;
+    if (numBetrag < 0) {
+      isAusgabe = true;
+    } else if (sollIdx >= 0 && cols[sollIdx] && parseFloat(cols[sollIdx].replace(/\./g,'').replace(',','.')) > 0) {
+      isAusgabe = true;
+    } else if (habenIdx >= 0 && cols[habenIdx] && parseFloat(cols[habenIdx].replace(/\./g,'').replace(',','.')) > 0) {
+      isAusgabe = false;
+    } else {
+      // Sparkasse CAMT V2: all amounts positive, use Glaeubiger-ID or Buchungstext to detect
+      const glaeubigerIdx = header.findIndex(h => h.includes('glaeubigerid') || h.includes('glaeubigerId'));
+      const buchungstextIdx = header.findIndex(h => h === 'buchungstext');
+      const buchungstext = buchungstextIdx >= 0 ? (cols[buchungstextIdx]||'').toLowerCase() : '';
+      const hatGlaeubiger = glaeubigerIdx >= 0 && cols[glaeubigerIdx] && cols[glaeubigerIdx].length > 2;
+      // Eingehende Überweisungen / Gutschriften = nicht Ausgabe
+      const istGutschrift = buchungstext.includes('gutschr') || buchungstext.includes('eingang') || buchungstext.includes('lohn') || buchungstext.includes('gehalt');
+      isAusgabe = !istGutschrift; // Default: treat as Ausgabe unless clearly income
+    }
+
+    // Get name: prefer Beguenstigter/Auftraggeber, then Verwendungszweck
     let name = '';
-    if (nameIdx >= 0 && cols[nameIdx]) name = cols[nameIdx];
-    if ((!name || name.length < 3) && partnerIdx >= 0 && cols[partnerIdx]) name = cols[partnerIdx];
+    if (partnerIdx >= 0 && cols[partnerIdx] && cols[partnerIdx].length > 2) name = cols[partnerIdx];
+    if ((!name || name.length < 3) && nameIdx >= 0 && cols[nameIdx]) name = cols[nameIdx];
     if (!name) name = cols.filter((_,i) => i !== betragIdx && i !== datumIdx).find(c => c.length > 2) || 'Unbekannt';
 
     const datum = datumIdx >= 0 ? cols[datumIdx] : '';
-    const isAusgabe = numBetrag < 0;
 
     _csvRows.push({
       name: name.slice(0, 80),
