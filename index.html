@@ -1136,30 +1136,120 @@ function handleCsvFile(e){
   reader.onload=ev=>parseCsv(ev.target.result);
   reader.readAsText(file,'UTF-8');e.target.value='';
 }
-function parseCsv(text){
-  const delimiters=[';',',','\t'];const firstLine=text.split('\n')[0];
-  const delim=delimiters.find(d=>firstLine.includes(d))||';';
-  const lines=text.split('\n').filter(l=>l.trim().length>0);
-  if(lines.length<2){document.getElementById('csv-parse-status').innerHTML='<span style="color:var(--danger);">⚠️ Datei zu kurz.</span>';return;}
-  const header=lines[0].split(delim).map(h=>h.replace(/["\r]/g,'').trim().toLowerCase());
-  const betragIdx=header.findIndex(h=>['betrag','amount','umsatz','wert','buchungsbetrag','soll','haben'].some(k=>h.includes(k)));
-  const nameIdx=header.findIndex(h=>['verwendungszweck','beschreibung','description','buchungstext','empfänger','zahlungsempfänger','auftraggeber'].some(k=>h.includes(k)));
-  const datumIdx=header.findIndex(h=>['datum','date','buchungsdatum','valuta'].some(k=>h.includes(k)));
-  _csvRows=[];
-  lines.slice(1).forEach(line=>{
-    const cols=line.split(delim).map(c=>c.replace(/["\r]/g,'').trim());if(cols.length<2)return;
-    const rawBetrag=betragIdx>=0?cols[betragIdx]:'';
-    const numBetrag=parseFloat(rawBetrag.replace(/\./g,'').replace(',','.'))||0;if(numBetrag===0)return;
-    const name=nameIdx>=0?cols[nameIdx]:cols.filter((_,i)=>i!==betragIdx).join(' ').slice(0,60);
-    const datum=datumIdx>=0?cols[datumIdx]:'';
-    const isAusgabe=numBetrag<0;
-    _csvRows.push({name:(name||'Unbekannt').slice(0,80),betrag:Math.abs(numBetrag),datum,isAusgabe,selected:isAusgabe});
+function parseCsvLine(line, delim) {
+  // Handles quoted fields with delimiters inside them
+  const result = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i+1] === '"') { field += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === delim && !inQuotes) {
+      result.push(field.trim().replace(/\r/g,''));
+      field = '';
+    } else {
+      field += ch;
+    }
+  }
+  result.push(field.trim().replace(/\r/g,''));
+  return result;
+}
+
+function parseCsv(text) {
+  const statusEl = document.getElementById('csv-parse-status');
+
+  // Normalize line endings
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const allLines = text.split('\n');
+
+  // Detect delimiter from first non-empty line
+  const firstNonempty = allLines.find(l => l.trim().length > 0) || '';
+  const delim = [';', ',', '\t'].find(d => firstNonempty.includes(d)) || ';';
+
+  // Find the header row — skip info lines at top (Sparkasse puts account info first)
+  // Header row is the one that contains recognizable column names
+  const headerKeywords = ['buchungsdatum','auftragskonto','betrag','beguenstigter','verwendungszweck',
+    'glaeubiger','mandatsreferenz','datum','umsatz','soll','haben','buchungstext','empfaenger','name'];
+  let headerLineIdx = -1;
+  for (let i = 0; i < Math.min(allLines.length, 15); i++) {
+    const low = allLines[i].toLowerCase();
+    if (headerKeywords.filter(k => low.includes(k)).length >= 2) {
+      headerLineIdx = i;
+      break;
+    }
+  }
+
+  if (headerLineIdx < 0) {
+    // Fallback: use first line with enough columns
+    for (let i = 0; i < Math.min(allLines.length, 10); i++) {
+      const cols = parseCsvLine(allLines[i], delim);
+      if (cols.length >= 3) { headerLineIdx = i; break; }
+    }
+  }
+
+  if (headerLineIdx < 0) {
+    statusEl.innerHTML = '<span style="color:var(--danger);">⚠️ Kein gültiger Header gefunden. Bitte „Excel (CSV-CAMT V2)" wählen.</span>';
+    return;
+  }
+
+  const header = parseCsvLine(allLines[headerLineIdx], delim).map(h => h.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/[^a-z0-9]/g,''));
+
+  // Find column indices — Sparkasse CAMT V2/V8 column names
+  const betragIdx = header.findIndex(h =>
+    ['betrag','buchungsbetrag','umsatz','soll','haben','amount'].some(k => h.includes(k)));
+  const nameIdx = header.findIndex(h =>
+    ['verwendungszweck','buchungstext','beguenstigternamedesueberweisenden','beguenstigter','glaeubigername','empfaenger','auftraggeber','description'].some(k => h.includes(k)));
+  const partnerIdx = header.findIndex(h =>
+    ['beguenstigter','auftraggeber','glaeubigername','zahlungsempfaenger','name'].some(k => h.includes(k)) && h !== header[nameIdx]);
+  const datumIdx = header.findIndex(h =>
+    ['buchungsdatum','valutadatum','datum','date','buchungstag'].some(k => h.includes(k)));
+
+  _csvRows = [];
+  const dataLines = allLines.slice(headerLineIdx + 1).filter(l => l.trim().length > 0);
+
+  dataLines.forEach(line => {
+    const cols = parseCsvLine(line, delim);
+    if (cols.length < 2) return;
+
+    // Get amount
+    let rawBetrag = betragIdx >= 0 ? cols[betragIdx] : '';
+    // Try all columns if not found
+    if (!rawBetrag && betragIdx < 0) {
+      cols.forEach(c => { if (!rawBetrag && /^-?[\d.,]+$/.test(c.replace(/\s/g,''))) rawBetrag = c; });
+    }
+    // Sparkasse format: "1.234,56" or "-1.234,56"
+    const numBetrag = parseFloat(rawBetrag.replace(/\./g,'').replace(',','.').replace(/[^0-9.,\-]/g,'')) || 0;
+    if (numBetrag === 0) return;
+
+    // Get name: prefer Verwendungszweck, fallback to partner name
+    let name = '';
+    if (nameIdx >= 0 && cols[nameIdx]) name = cols[nameIdx];
+    if ((!name || name.length < 3) && partnerIdx >= 0 && cols[partnerIdx]) name = cols[partnerIdx];
+    if (!name) name = cols.filter((_,i) => i !== betragIdx && i !== datumIdx).find(c => c.length > 2) || 'Unbekannt';
+
+    const datum = datumIdx >= 0 ? cols[datumIdx] : '';
+    const isAusgabe = numBetrag < 0;
+
+    _csvRows.push({
+      name: name.slice(0, 80),
+      betrag: Math.abs(numBetrag),
+      datum,
+      isAusgabe,
+      selected: isAusgabe
+    });
   });
-  if(!_csvRows.length){document.getElementById('csv-parse-status').innerHTML='<span style="color:var(--danger);">⚠️ Keine Buchungen gefunden.</span>';return;}
-  const ausgaben=_csvRows.filter(r=>r.isAusgabe).length;
-  document.getElementById('csv-parse-status').innerHTML=`<span style="color:var(--success);">✅ ${_csvRows.length} Buchungen erkannt (${ausgaben} Ausgaben vorausgewählt)</span>`;
+
+  if (!_csvRows.length) {
+    statusEl.innerHTML = `<span style="color:var(--danger);">⚠️ Keine Buchungen gefunden. Header erkannt in Zeile ${headerLineIdx+1}, Spalten: ${header.join(', ')}</span>`;
+    return;
+  }
+
+  const ausgaben = _csvRows.filter(r => r.isAusgabe).length;
+  statusEl.innerHTML = `<span style="color:var(--success);">✅ ${_csvRows.length} Buchungen erkannt · ${ausgaben} Ausgaben vorausgewählt</span>`;
   renderCsvPreview();
-  document.getElementById('csv-import-actions').style.display='flex';
+  document.getElementById('csv-import-actions').style.display = 'flex';
 }
 function renderCsvPreview(){
   const katOpts='<option>🐴 Pferde (3)</option><option>🐱 Katzen (2)</option><option>🐶 Hund (1)</option><option>🦆 Laufenten (7)</option><option>🏠 Haus & Grundstück</option><option>🛒 Lebensmittel</option><option>🚗 Auto & Fahrtkosten</option><option>📱 Handy & Internet</option><option>💼 Geschäftlich (läuft privat)</option><option>🛍️ Amazon (Problem-Konto)</option><option>📺 Abo & Streaming</option><option>👗 Kleidung & Persönliches</option><option>💊 Gesundheit</option><option>🎓 Fortbildung / Kurse</option><option>🎁 Geschenke & Soziales</option><option>💈 Friseur & Pflege</option><option selected>📦 Sonstiges</option>';
