@@ -1194,17 +1194,21 @@ function parseCsv(text) {
     return;
   }
 
-  const header = parseCsvLine(allLines[headerLineIdx], delim).map(h => h.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/[^a-z0-9]/g,''));
+  const header = parseCsvLine(allLines[headerLineIdx], delim).map(h => 
+    h.toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/[^a-z0-9]/g,'')
+  );
 
-  // Find column indices — Sparkasse CAMT V2/V8 column names
-  const betragIdx = header.findIndex(h =>
-    ['betrag','buchungsbetrag','umsatz','soll','haben','amount'].some(k => h.includes(k)));
-  const nameIdx = header.findIndex(h =>
-    ['verwendungszweck','buchungstext','beguenstigternamedesueberweisenden','beguenstigter','glaeubigername','empfaenger','auftraggeber','description'].some(k => h.includes(k)));
-  const partnerIdx = header.findIndex(h =>
-    ['beguenstigter','auftraggeber','glaeubigername','zahlungsempfaenger','name'].some(k => h.includes(k)) && h !== header[nameIdx]);
-  const datumIdx = header.findIndex(h =>
-    ['buchungsdatum','valutadatum','datum','date','buchungstag'].some(k => h.includes(k)));
+  // Find column — exact match first, then partial
+  const findCol = (exact, partial) => {
+    let i = header.findIndex(h => exact.includes(h));
+    if (i < 0) i = header.findIndex(h => partial.some(k => h.includes(k)));
+    return i;
+  };
+
+  const betragIdx = findCol(['betrag','amount'], ['buchungsbetrag']);
+  const nameIdx   = findCol(['verwendungszweck'], ['verwendungszweck','description','buchungstext']);
+  const partnerIdx= findCol(['beguenstigterzahlungspflichtiger','beguenstigter','auftraggeber'], ['zahlungspflichtiger','zahlungsempfaenger']);
+  const datumIdx  = findCol(['buchungstag','buchungsdatum','datum','date'], ['buchungstag','buchungsdatum','valutadatum']);
 
   _csvRows = [];
   const dataLines = allLines.slice(headerLineIdx + 1).filter(l => l.trim().length > 0);
